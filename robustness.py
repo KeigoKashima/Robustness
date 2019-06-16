@@ -39,27 +39,31 @@ n_G1 = np.zeros ((N,step))
 n_G2 = np.zeros ((N,step))
 
 
-x_G0 = np.zeros(step) ##フリーユニット間の重心
-x_G1 = np.zeros(step) ##重心 固定（上）
-x_G2 = np.zeros(step) ##重心 固定（下）
-y_G0 = np.zeros(step) ##フリーユニット間の重心
-y_G1 = np.zeros(step) ##重心 固定（上）
-y_G2 = np.zeros(step) ##重心 固定（下）
-dx_G0 = np.zeros(step) ##フリーユニット間の重心速度
-dx_G1 = np.zeros(step) ##重心速度 固定（上）
-dx_G2 = np.zeros(step) ##重心速度 固定（下）
-ddx_G0 = np.zeros(step) ##フリーユニット間の重心加速度
-ddx_G1 = np.zeros(step) ##重心加速度 固定（上）
-ddx_G2 = np.zeros(step) ##重心加速度 固定（下）
+x_G0 = np.zeros(step) ##G0の重心x座標
+x_G1 = np.zeros(step) ##G1
+x_G2 = np.zeros(step) ##G2
+y_G0 = np.zeros(step) ##G0の重心y座標
+y_G1 = np.zeros(step) ##G1
+y_G2 = np.zeros(step) ##G2
+dx_G0 = np.zeros(step) ##G0の重心速度
+dx_G1 = np.zeros(step) ##G1
+dx_G2 = np.zeros(step) ##G2
+ddx_G0 = np.zeros(step) ##G0の重心加速度
+ddx_G1 = np.zeros(step) ##G1
+ddx_G2 = np.zeros(step) ##G2
 
 
-M_G0 = np.zeros(step) ##フリーユニット間の重心
-M_G1 = np.zeros(step) ##重心 固定（上）
-M_G2 = np.zeros(step) ##重心 固定（下）
+M_G0 = np.zeros(step) ##G0の重心
+M_G1 = np.zeros(step) ##G1
+M_G2 = np.zeros(step) ##G2
 
-I_G0 = np.zeros(step) ##フリーユニット間の重心
-I_G1 = np.zeros(step) ##重心 固定（上）
-I_G2 = np.zeros(step) ##重心 固定（下）
+I_G0 = np.zeros(step) ##G0の慣性モーメント
+I_G1 = np.zeros(step) ##G1
+I_G2 = np.zeros(step) ##G2
+
+h_G0 = np.zeros(step) ##G0
+h_G1 = np.zeros(step) ##重心
+h_G2 = np.zeros(step) ##重心
 
 
 ##初期値
@@ -73,9 +77,10 @@ Attacked_unit = 5
 
 def Inertia(first_unit,last_unit,s):
     """
+	G0,G1,G2の重心座標，質量，慣性モーメントを求める関数
     引数
-        first_unit：フリーユニット（上）
-        last_unit：フリーユニット（下）
+        first_unit：フリーユニット（下）
+        last_unit：フリーユニット（上）
         s：ステップ数
         G0，G1，G2の重心，質量，慣性モーメントを求める
     """
@@ -86,6 +91,10 @@ def Inertia(first_unit,last_unit,s):
     x_G0[s] = sum(x[first_unit:last_unit+1, s])/num #x座標
     y_G0[s] = (y[last_unit+1,s]-y[first_unit+1,s])/2#y座標
     M_G0[s] = M*num
+	h_G0[s] = h*num	 ##2h*num/2
+
+	##更新
+	I_G0[s] = 0
     for i in range(first_unit, last_unit+1):
         I_G0[s] += I + M*((x[i,s]-x_G0[s])**2+(y[i,s]-y_G0[s])**2)
 
@@ -93,15 +102,18 @@ def Inertia(first_unit,last_unit,s):
     x_G1[s] = sum(x[last_unit+1:, s])/(N-last_unit-1) #x座標
     y_G1[s] = sum(y[last_unit+1:, s])/(N-last_unit-1)#y座標
     M_G1[s] = M*(N-last_unit)
+	h_G1[s] = M*(N-last_unit)
     I_G1[s] = M_G1[s]*((N-last_unit)**2+b**2)/3
     ##G2の重心の座標，質量
     x_G2[s] = sum(x[:first_unit, s])/first_unit #x座標
     y_G2[s] = sum(y[:first_unit, s])/first_unit#y座標
-    M_G2[s] = M*(first_unit)
+    M_G2[s] = M*first_unit
+	h_G0[s] = h*first_unit
     I_G2[s] = M_G2[s]*(first_unit**2+b**2)/3
 
 def impulse(unit,s):
     """
+	衝撃力が働いている間のG0,G1,G2のx座標y座標及び，回転角度を求める関数
     引数
         unit:衝撃が与えられたユニット
         s :ステップ数
@@ -157,19 +169,24 @@ def impulse(unit,s):
     #w[unit,s+1]= (f2[unit,s]*(Y-y_G2[s]+hd)+NG2*(nG2+X-XG2))*dt/I_G2
     #theta[unit,s+1] = THETA+W*dt
 
-def G0(s):
+def G0(first_unit,last_unit,s):
     """
+	G0の重心座標，回転角度を求める関数
     引数
+		first_unit：フリーユニット（下）
+        last_unit：フリーユニット（上）
         s:ステップ数
-
     """
     #置き換え
     X = x[unit,s]
     Y = y[unit,s]
     DX = dx[unit,s]
+	DDX = ddx[unit,s]
     THETA = theta[unit,s]
     W = w[unit,s]
     DW = dw[unit,s]
+	XG0 = x_G0[s]
+    YG0 = y_G0[s]
     XG1 = x_G1[s]
     YG1 = y_G1[s]
     XG2 = x_G2[s]
@@ -182,13 +199,23 @@ def G0(s):
     NG2  = N_G2[unit,s]
     nG1  = n_G1[unit,s]
     nG2  = n_G2[unit,s]
+	hG0  = h_G0[s]
+	hG1  = h_G1[s]
+	hG2  = h_G2[s]
+	f1   = f1[unit,s]
+	f2   = f2[unit,s]
 
 
     ##G0の加速度と
-    #ddx[unit,s+1] = (c*(2*DXG0-dx[last+1,s]-dx[first-1,s]) + k*(x[last,s]-x[last+1,s] + x[first,s]-x[first-1,s]) - M_G0[s]*g*sin(THETA))/M_G0[s]
+    ddx[unit,s+1] = DDX + (c*(2*DXG0-dx[last+1,s]-dx[first-1,s]) + k*(x[last,s]-x[last+1,s] + x[first,s]-x[first-1,s]))/M_G0[s] \
+					- M_G0[s]*g*sin(THETA) -XG0*W**2 -YG0*DW
 
-    #dx_G0[unit,s+1] = DXG1[s] + DDXG1[s]
-    #x_G0[unit,s+1]  = XG1[s]  + DXG1[s]
+    dx_G0[unit,s+1] = DXG1[s] + DDXG1[s]
+    x_G0[unit,s+1]  = XG1[s]  + DXG1[s]
+
+	dw[unit,s] = (NG1*nG1 + NG2*nG2 +  f1*(hG0-hd) + f2*(hG0+hd)
+	dw_G0[unit,s+1] = DWG1[s] + DDWG1[s]
+    w_G0[unit,s+1]  = WG1[s]  + DWG1[s]
 
 
 
