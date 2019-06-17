@@ -27,11 +27,6 @@ step = int(T/dt) #ステップ数
 ##np.array(下から数えたユニットの番号，ステップ数)
 x = np.zeros( ((AllUnits,step)))    ##ユニットiのx'座標: x[i][j]，
 y = np.zeros ((AllUnits,step))    ##y'座標y[i][j]
-dx = np.zeros ((AllUnits,step))   ##xの変化量dx/dt
-ddx = np.zeros ((AllUnits,step))  ##二階微分 ddx/dt
-theta = np.zeros ((AllUnits,step))##角度
-w = np.zeros ((AllUnits,step))    ##角速度
-dw = np.zeros ((AllUnits,step))   ##角加速度
 
 x_G0 = np.zeros(step) ##G0の重心x座標
 x_G1 = np.zeros(step) ##G1
@@ -45,6 +40,10 @@ dx_G2 = np.zeros(step) ##G2
 ddx_G0 = np.zeros(step) ##G0の重心加速度
 ddx_G1 = np.zeros(step) ##G1
 ddx_G2 = np.zeros(step) ##G2
+
+theta = np.zeros (step)##角度
+w = np.zeros (step)    ##角速度
+dw = np.zeros (step)   ##角加速度
 
 M_G0 = np.zeros(step) ##G0の重心
 M_G1 = np.zeros(step) ##G1
@@ -76,6 +75,37 @@ y[:,0] += [i*2*h+h for i in range(AllUnits)]
 F = 10
 Attacked_unit = 5
 
+##簡略化のための変数．初期化
+THETA = theta[0]
+W = w[0]
+DW = dw[0]
+XG0 = x_G0[0]
+YG0 = y_G0[0]
+XG1 = x_G1[0]
+YG1 = y_G1[0]
+XG2 = x_G2[0]
+YG2 = y_G2[0]
+DXG0 = dx_G0[0]
+DXG1 = dx_G1[0]
+DXG2 = dx_G2[0]
+DYG0 = dx_G0[0]
+DYG1 = dy_G1[0]
+DYG2 = dy_G2[0]
+DDXG0 = ddx_G0[0]
+DDXG1 = ddx_G1[0]
+DDXG2 = ddx_G2[0]
+DDYG0 = ddy_G0[0]
+DDYG1 = ddy_G1[0]
+DDYG2 = ddy_G2[0]
+NG1  = N_G1[0,0]
+NG2  = N_G2[0,0]
+nG1  = n_G1[0,0]
+nG2  = n_G2[0,0]
+hG0  = h_G0[0]
+hG1  = h_G1[0]
+hG2  = h_G2[0]
+F1   = f1[0]
+F2   = f2[0]
 
 def Inertia(first_unit,last_unit,s):
     """
@@ -110,13 +140,55 @@ def Inertia(first_unit,last_unit,s):
     x_G2[s] = sum(x[:first_unit, s])/first_unit #x座標
     y_G2[s] = sum(y[:first_unit, s])/first_unit#y座標
     M_G2[s] = M*first_unit
-	h_G0[s] = h*first_unit
+	h_G2[s] = h*first_unit
     I_G2[s] = M_G2[s]*(first_unit**2+b**2)/3
 
     ##G0,G1,G2に働く力
-    N_G1[s] = M_G1[s]*g*sin(theta[s]) - M_G1[s]*y_G1[s]*w[unit,s]**2 + M_G1[s]*x_G1[s]*dw[units,s]
-    N_G2[s] = N_G1[s] + M_G0[s]*g*cos(theta[s]) - M_G0[s]*y_G0[s]*w[unit,s]**2 + M_G0[s]*x_G0[s]*dw[unit,s]
-    N[s]    =
+    N_G1[s] = M_G1[s]*g*sin(theta[s]) - M_G1[s]*y_G1[s]*w[s]**2 + M_G1[s]*x_G1[s]*dw[units,s]
+    N_G2[s] = N_G1[s] + M_G0[s]*g*cos(theta[s]) - M_G0[s]*y_G0[s]*w[s]**2 + M_G0[s]*x_G0[s]*dw[s]
+
+    f1[s]= c*(dx[last_unit,s]-dx_G1[s]) + k*(x[last_unit,s]-x_G1[s])  #上
+    f2[s]= c*(dx[first_unit,s]-dx_G2[s]) + k*(x[first_unit,s]-x_G2[s])   #下
+    if theta[s] < 0.1:
+        H[s] = f2[s]
+        N[s] = N_G2[s]
+
+
+    #置き換え
+    X = x[unit,s]
+    Y = y[unit,s]
+    DX = dx[unit,s]
+	DDX = ddx[unit,s]
+    THETA = theta[s]
+    W = w[s]
+    DW = dw[s]
+	XG0 = x_G0[s]
+    YG0 = y_G0[s]
+    XG1 = x_G1[s]
+    YG1 = y_G1[s]
+    XG2 = x_G2[s]
+    YG2 = y_G2[s]
+    DXG0 = dx_G0[s]
+    DXG1 = dx_G1[s]
+    DXG2 = dx_G2[s]
+    DYG0 = dx_G0[s]
+    DYG1 = dy_G1[s]
+    DYG2 = dy_G2[s]
+    DDXG0 = ddx_G0[s]
+    DDXG1 = ddx_G1[s]
+    DDXG2 = ddx_G2[s]
+    DDYG0 = ddy_G0[s]
+    DDYG1 = ddy_G1[s]
+    DDYG2 = ddy_G2[s]
+    NG1  = N_G1[unit,s]
+    NG2  = N_G2[unit,s]
+    nG1  = n_G1[unit,s]
+    nG2  = n_G2[unit,s]
+	hG0  = h_G0[s]
+	hG1  = h_G1[s]
+	hG2  = h_G2[s]
+    F1   = f1[s]
+    F2   = f2[s]
 
 def impulse(unit,s):
     """
@@ -126,214 +198,86 @@ def impulse(unit,s):
         s :ステップ数
     """
 
-    #置き換え
-    X = x[unit,s]
-    Y = y[unit,s]
-    DX = dx[unit,s]
-    THETA = theta[unit,s]
-    W = w[unit,s]
-    DW = dw[unit,s]
-    XG1 = x_G1[s]
-    YG1 = y_G1[s]
-    XG2 = x_G2[s]
-    YG2 = y_G2[s]
-    DXG1 = dx_G1[s]
-    DXG2 = dx_G2[s]
-    #DYG1 = dy_G1[s]
-    #DYG2 = dy_G2[s]
-    NG1  = N_G1[unit,s]
-    NG2  = N_G2[unit,s]
-    nG1  = n_G1[unit,s]
-    nG2  = n_G2[unit,s]
-
-
-    ##衝撃力がかかっている間の各変数の値を求める
-    ##ユニット間 G0###
-    f1[unit,s]= c*(DX-DXG1) + k*(X-XG1)  #上
-    f2[unit,s]= c*(DX-DXG2) + k*(X-XG2)  #下
     ##t_s+1における速度と座標
-    dx[unit,s+1] = DX + (F-(f1[unit,s]+f2[unit,s]))*dt/M
-    x[unit,s+1]  = X + DX*dt
+    dx_G0[s+1] = DX + (F-(F1+F2))*dt/M
+    x_G0[s+1]  = X + DX*dt
     ##t_s+1における角速度と角度
-    w[unit,s+1] = W + ((NG1*nG1+NG2*nG2) + f1[unit,s]*(h-hd) + f2[unit,s]*(h+hd))*dt/IG0
-    theta[unit,s+1]=THETA+W*dt
+    w[s+1] = W + ((NG1*nG1+NG2*nG2) + F1*(h-hd) + F2*(h+hd))*dt/IG0
+    theta[s+1]=THETA+W*dt
 
     ##上 G1###
     ##G1の速度，座標
-    dx_G1[s+1] = dx_G1[s+1] + f1[unit,s]*dt/M_G1[s]
+    dx_G1[s+1] = DXG1 + F1*dt/M_G1[s]
     x_G1[s+1]  = XG1 + DXG1*dt
     x[unit+1:,s+1]=x_G1[s+1] ##G1全てのユニットのx座標をxG1に
     ##G1の角速度角度
-    #w[unit,s+1]= (-f1[unit,s]*(y_G1[s]-Y-hd) + NG1*(nG1-X+XG1))*dt/I_G1
-    #theta[unit,s+1] = THETA+W*dt
+    #w[s+1]= (-f1[unit,s]*(y_G1[s]-Y-hd) + NG1*(nG1-X+XG1))*dt/I_G1
+    #theta[s+1] = THETA+W*dt
 
     ##下 G2##
     ##G2の速度，座標##
-    dx_G2[s+1] = dx_G2[s+1] + f2[unit,s]*dt/M_G2[s]
+    dx_G2[s+1] = dx_G2[s+1] + F2*dt/M_G2[s]
     x_G2[s+1]  = XG2 + DXG2*dt
     x[:unit,s+1]=x_G2[s+1] ##G2全てのユニットのx座標をxG2に
     ##G2の角速度角度
-    #w[unit,s+1]= (f2[unit,s]*(Y-y_G2[s]+hd)+NG2*(nG2+X-XG2))*dt/I_G2
-    #theta[unit,s+1] = THETA+W*dt
+    #w[s+1]= (f2[unit,s]*(Y-y_G2[s]+hd)+NG2*(nG2+X-XG2))*dt/I_G2
+    #theta[s+1] = THETA+W*dt
 
-def G0(s):
+def G0(unit,s):
     """
 	G0の重心座標，回転角度を求める関数
     引数
+        unit:衝撃が与えられたユニット
         s:ステップ数
     """
-    #置き換え
-    X = x[unit,s]
-    Y = y[unit,s]
-    DX = dx[unit,s]
-	DDX = ddx[unit,s]
-    THETA = theta[unit,s]
-    W = w[unit,s]
-    DW = dw[unit,s]
-	XG0 = x_G0[s]
-    YG0 = y_G0[s]
-    XG1 = x_G1[s]
-    YG1 = y_G1[s]
-    XG2 = x_G2[s]
-    YG2 = y_G2[s]
-    DXG0 = dx_G0[s]
-    DXG1 = dx_G1[s]
-    DXG2 = dx_G2[s]
-    DYG0 = dx_G0[s]
-    DYG1 = dy_G1[s]
-    DYG2 = dy_G2[s]
-    DDXG0 = ddx_G0[s]
-    DDXG1 = ddx_G1[s]
-    DDXG2 = ddx_G2[s]
-    DDYG0 = ddy_G0[s]
-    DDYG1 = ddy_G1[s]
-    DDYG2 = ddy_G2[s]
-    NG1  = N_G1[unit,s]
-    NG2  = N_G2[unit,s]
-    nG1  = n_G1[unit,s]
-    nG2  = n_G2[unit,s]
-	hG0  = h_G0[s]
-	hG1  = h_G1[s]
-	hG2  = h_G2[s]
-	f1   = f1[unit,s]
-	f2   = f2[unit,s]
-
 
     ##G0の加速度
-    ddx_G0[s+1] = DDXG0 + (c*(2*DXG0-dx[last+1,s]-dx[first-1,s]) + k*(x[last,s]-x[last+1,s] + x[first,s]-x[first-1,s]))/M_G0[s] \
+    ddx_G0[s+1] = DDXG0 + (F1 + F2)/M_G0[s] \
 					- g*sin(THETA) -XG0*W**2 -YG0*DW
     ##G0の速度
     dx_G0[unit,s+1] = DXG1 + DDXG1*dt
     ##G0のx座標
     x_G0[unit,s+1]  = XG1  + DXG1*dt
 
-    ##G0の角加速度
-	dw[unit,s] = DW + (NG1*nG1 + NG2*nG2 +  f1*(hG0-hd) + f2*(hG0+hd))*dt
-    ##G0の角速度
-    w_G0[unit,s+1] = WG0 + DWG1*dt
-    ##G0の角度
-    theta_G0[unit,s+1]  = THETA + W*dt
+    # ##G0の角加速度
+	# dw[s] = DW + (NG1*nG1 + NG2*nG2 +  f1*(hG0-hd) + f2*(hG0+hd))*dt
+    # ##G0の角速度
+    # w_G0[unit,s+1] = WG0 + DWG1*dt
+    # ##G0の角度
+    # theta_G0[unit,s+1]  = THETA + W*dt
 
-def G1(s):
+def G1(unit,s):
     """
 	G1の重心座標，回転角度を求める関数
     引数
+        unit:衝撃が与えられたユニット
         s:ステップ数
     """
-    #置き換え
-    X = x[unit,s]
-    Y = y[unit,s]
-    DX = dx[unit,s]
-	DDX = ddx[unit,s]
-    THETA = theta[unit,s]
-    W = w[unit,s]
-    DW = dw[unit,s]
-	XG0 = x_G0[s]
-    YG0 = y_G0[s]
-    XG1 = x_G1[s]
-    YG1 = y_G1[s]
-    XG2 = x_G2[s]
-    YG2 = y_G2[s]
-    DXG0 = dx_G0[s]
-    DXG1 = dx_G1[s]
-    DXG2 = dx_G2[s]
-    DYG0 = dx_G0[s]
-    DYG1 = dy_G1[s]
-    DYG2 = dy_G2[s]
-    DDXG0 = ddx_G0[s]
-    DDXG1 = ddx_G1[s]
-    DDXG2 = ddx_G2[s]
-    DDYG0 = ddy_G0[s]
-    DDYG1 = ddy_G1[s]
-    DDYG2 = ddy_G2[s]
-    NG1  = N_G1[unit,s]
-    NG2  = N_G2[unit,s]
-    nG1  = n_G1[unit,s]
-    nG2  = n_G2[unit,s]
-	hG0  = h_G0[s]
-	hG1  = h_G1[s]
-	hG2  = h_G2[s]
-	f1   = f1[unit,s]
-	f2   = f2[unit,s]
 
     ##G1の加速度
-    ddx_G1[unit,s+1] = DDXG1 - f1/M_G1[s] - g*sin(THETA) -XG1*W**2 - YG1*DW
+    ddx_G1[unit,s+1] = DDXG1 - F1/M_G1[s] - g*sin(THETA) -XG1*W**2 - YG1*DW
     ##G1の速度
     dx_G0[unit,s+1] = DXG1 + DDXG1*dt
     ##G1のx'座標
     x_G0[unit,s+1]  = XG1  + DXG1*dt
 
-    ##G1の角加速度
-	dw[unit,s] = DW + NG1*(nG1-XG0+XG1) - f1*(hG1+hd)
-    ##G1の角速度
-	w_G1[unit,s+1] = WG1 + DWG1*dt
-    ##G1の角度
-    theta_G1[unit,s+1]  = THETA + W*dt
+    # ##G1の角加速度
+	# dw[s] = DW + NG1*(nG1-XG0+XG1) - f1*(hG1+hd)
+    # ##G1の角速度
+	# w_G1[unit,s+1] = WG1 + DWG1*dt
+    # ##G1の角度
+    # theta_G1[unit,s+1]  = THETA + W*dt
 
-def G2(s):
+def G2(unit,s):
     """
 	G2の重心座標，回転角度を求める関数
     引数
+        unit:衝撃が与えられたユニット
         s:ステップ数
     """
-    #置き換え
-    X = x[unit,s]
-    Y = y[unit,s]
-    DX = dx[unit,s]
-	DDX = ddx[unit,s]
-    THETA = theta[unit,s]
-    W = w[unit,s]
-    DW = dw[unit,s]
-	XG0 = x_G0[s]
-    YG0 = y_G0[s]
-    XG1 = x_G1[s]
-    YG1 = y_G1[s]
-    XG2 = x_G2[s]
-    YG2 = y_G2[s]
-    DXG0 = dx_G0[s]
-    DXG1 = dx_G1[s]
-    DXG2 = dx_G2[s]
-    DYG0 = dx_G0[s]
-    DYG1 = dy_G1[s]
-    DYG2 = dy_G2[s]
-    DDXG0 = ddx_G0[s]
-    DDXG1 = ddx_G1[s]
-    DDXG2 = ddx_G2[s]
-    DDYG0 = ddy_G0[s]
-    DDYG1 = ddy_G1[s]
-    DDYG2 = ddy_G2[s]
-    NG1  = N_G1[unit,s]
-    NG2  = N_G2[unit,s]
-    nG1  = n_G1[unit,s]
-    nG2  = n_G2[unit,s]
-	hG0  = h_G0[s]
-	hG1  = h_G1[s]
-	hG2  = h_G2[s]
-	f1   = f1[unit,s]
-	f2   = f2[unit,s]
 
     ##G2の加速度
-    ddx_G2[unit,s+1] = DDXG2 - (f2 - N*sin(THETA) - H*cos(THETA))/M_G2[s] \
+    ddx_G2[unit,s+1] = DDXG2 - (F2 - N*sin(THETA) - H*cos(THETA))/M_G2[s] \
                        - g*sin(THETA) - XG2*W**2 + YG2*DW
     ##G2の速度
     dx_G2[unit,s+1] = DXG2 + DDXG2*dt
@@ -341,12 +285,11 @@ def G2(s):
     x_G2[unit,s+1]  = XG2  + DXG2*dt
 
     ##G2の角加速度
-	dw[unit,s] = DW + NG2*(nG2+XG0-XG2) + N*XG2 + H*YG2 - f2*(hG2-hd)
+	dw[s] = DW + NG2*(nG2+XG0-XG2) + N*XG2 + H*YG2 - F2*(hG2-hd)
     ##G2の角速度
-	w_G2[unit,s+1] = WG2 + DWG2*dt
+	w[s+1] = W + DW*dt
     ##G2の角度
-    theta_G2[unit,s+1]  = THETA + W*dt
-
+    theta[s+1]  = THETA + W*dt
 
 
 first = Attacked_unit
@@ -361,12 +304,15 @@ for t in range(int(TF/dt)):
     else:
         if x[first,t]-x_G2[t] > x_max:
             first -= 1
+
         elif x[last,t]-x_G1[t] > x_max:
             last  += 1
+
         else:
             G0(t)
-        #    G1(t)
-        #    G2(t)
+            G1(t)
+            G2(t)
+
 
 print(x_G0[0:10])
 print(x_G1[0:10])
