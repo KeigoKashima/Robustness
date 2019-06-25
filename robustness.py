@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
+from math import *
 import numpy as np
 from matplotlib import pyplot as plt
-
-
 
 ##ユニットの各パラメータ
 M  = 0.1 #[kg] ユニットの質量
@@ -89,19 +88,22 @@ DXG0 = dx_G0[0]
 DXG1 = dx_G1[0]
 DXG2 = dx_G2[0]
 DYG0 = dx_G0[0]
-DYG1 = dy_G1[0]
-DYG2 = dy_G2[0]
-NG1  = N_G1[0,0]
-NG2  = N_G2[0,0]
+NG1  = N_G1[0]
+NG2  = N_G2[0]
 hG0  = h_G0[0]
 hG1  = h_G1[0]
 hG2  = h_G2[0]
 F1   = f1[0]
 F2   = f2[0]
+IG0  = I_G0[0]
+IG1  = I_G1[0]
+IG2  = I_G2[0]
+
+
 
 def Inertia(low_unit,high_unit,s):
     """
-	G0,G1,G2の重心座標，質量，慣性モーメント，垂直抗力，を求める関数
+    G0,G1,G2の重心座標，質量，慣性モーメント，垂直抗力，を求める関数
     引数
         low_unit：フリーユニット（下）
         high_unit：フリーユニット（上）
@@ -115,10 +117,8 @@ def Inertia(low_unit,high_unit,s):
     x_G0[s] = sum(x[low_unit:high_unit+1, s])/num #x座標
     y_G0[s] = (y[high_unit+1,s]-y[low_unit+1,s])/2#y座標
     M_G0[s] = M*num
-	h_G0[s] = h*num	 ##2h*num/2
-
-	##更新
-	I_G0[s] = 0
+    h_G0[s] = h*num##2h*num/2
+    I_G0[s] = 0
     for i in range(low_unit, high_unit+1):
         I_G0[s] += I + M*((x[i,s]-x_G0[s])**2+(y[i,s]-y_G0[s])**2)
 
@@ -126,35 +126,32 @@ def Inertia(low_unit,high_unit,s):
     x_G1[s] = sum(x[high_unit+1:, s])/(AllUnits-high_unit-1) #x座標
     y_G1[s] = sum(y[high_unit+1:, s])/(AllUnits-high_unit-1)#y座標
     M_G1[s] = M*(AllUnits-high_unit)
-	h_G1[s] = M*(AllUnits-high_unit)
+    h_G1[s] = M*(AllUnits-high_unit)
     I_G1[s] = M_G1[s]*((AllUnits-high_unit)**2+b**2)/3
     ##G2の重心の座標，質量
     x_G2[s] = sum(x[:low_unit, s])/low_unit #x座標
     y_G2[s] = sum(y[:low_unit, s])/low_unit#y座標
     M_G2[s] = M*low_unit
-	h_G2[s] = h*low_unit
+    h_G2[s] = h*low_unit
     I_G2[s] = M_G2[s]*(low_unit**2+b**2)/3
 
+
     ##G0,G1,G2に働く力
-    N_G1[s] = M_G1[s]*g*sin(theta[s]) - M_G1[s]*y_G1[s]*w[s]**2 + M_G1[s]*x_G1[s]*dw[units,s]
+    N_G1[s] = M_G1[s]*g*sin(theta[s]) - M_G1[s]*y_G1[s]*w[s]**2 + M_G1[s]*x_G1[s]*dw[s]
     N_G2[s] = N_G1[s] + M_G0[s]*g*cos(theta[s]) - M_G0[s]*y_G0[s]*w[s]**2 + M_G0[s]*x_G0[s]*dw[s]
 
-    f1[s]= c*(dx[high_unit,s]-dx_G1[s]) + k*(x[high_unit,s]-x_G1[s])  #上
-    f2[s]= c*(dx[low_unit,s]-dx_G2[s]) + k*(x[low_unit,s]-x_G2[s])   #下
+    f1[s]= c*(dx_G0[s]-dx_G1[s]) + k*(x[high_unit,s]-x_G1[s])  #上
+    f2[s]= c*(dx_G0[s]-dx_G2[s]) + k*(x[low_unit,s]-x_G2[s])   #下
     if theta[s] < 0.1:
-        H[s] = f2[s]
-        N[s] = N_G2[s]
+        FH[s] = f2[s]
+        FN[s] = N_G2[s]
 
 
     #置き換え
-    X = x[unit,s]
-    Y = y[unit,s]
-    DX = dx[unit,s]
-	DDX = ddx[unit,s]
     THETA = theta[s]
     W = w[s]
     DW = dw[s]
-	XG0 = x_G0[s]
+    XG0 = x_G0[s]
     YG0 = y_G0[s]
     XG1 = x_G1[s]
     YG1 = y_G1[s]
@@ -164,35 +161,34 @@ def Inertia(low_unit,high_unit,s):
     DXG1 = dx_G1[s]
     DXG2 = dx_G2[s]
     DYG0 = dx_G0[s]
-    DYG1 = dy_G1[s]
-    DYG2 = dy_G2[s]
     DDXG0 = ddx_G0[s]
     DDXG1 = ddx_G1[s]
     DDXG2 = ddx_G2[s]
-    DDYG0 = ddy_G0[s]
-    DDYG1 = ddy_G1[s]
-    DDYG2 = ddy_G2[s]
-    NG1  = N_G1[unit,s]
-    NG2  = N_G2[unit,s]
-    nG1  = n_G1[unit,s]
-    nG2  = n_G2[unit,s]
-	hG0  = h_G0[s]
-	hG1  = h_G1[s]
-	hG2  = h_G2[s]
+    NG1  = N_G1[s]
+    NG2  = N_G2[s]
+    nG1  = n_G1[s]
+    nG2  = n_G2[s]
+    hG0  = h_G0[s]
+    hG1  = h_G1[s]
+    hG2  = h_G2[s]
     F1   = f1[s]
     F2   = f2[s]
 
+    IG0  = I_G0[s]
+    IG1  = I_G1[s]
+    IG2  = I_G2[s]
+
 def impulse(unit,s):
     """
-	衝撃力が働いている間のG0,G1,G2のx座標y座標及び，回転角度を求める関数
+    衝撃力が働いている間のG0,G1,G2のx座標y座標及び，回転角度を求める関数
     引数
         unit:衝撃が与えられたユニット
         s :ステップ数
     """
 
     ##t_s+1における速度と座標
-    dx_G0[s+1] = DX + (F-(F1+F2))*dt/M
-    x_G0[s+1]  = X + DX*dt
+    dx_G0[s+1] = DXG0 + (F-(F1+F2))*dt/M
+    x_G0[s+1]  = XG0 + DXG0*dt
 
     ##上 G1###
     ##G1の速度，座標
@@ -208,12 +204,11 @@ def impulse(unit,s):
 
 def PosRotate(unit,s):
     """
-	重心座標，回転角度を求める関数
+    重心座標，回転角度を求める関数
     引数
         unit:衝撃が与えられたユニット
         s:ステップ数
     """
-
     ##G0の加速度
     DDXG0 = (F1 + F2)/M_G0[s] - g*sin(THETA) -XG0*W**2 -YG0*DW
     ##G0の速度
@@ -229,183 +224,197 @@ def PosRotate(unit,s):
     x_G0[s+1]  = XG1  + DXG1*dt
 
     ##N,H,dWを求めるための行列
-    A = np.zeros(3,3)
-    b = np.zeros(3)
+    A = np.zeros((3,3))
+    B = np.zeros(3)
     NHDW = np.zeros(3)
     ##NHDW = [N,H,dW]
     A = np.array([
-        [cos(THETA), sin(THETA), M_G2[s]*YG2],
-        [sin(THETA), cos(THETA), M_G2[s]*b],
-        [-YG2, -b, -IG0+IG1+IG2]
-    ])
-    b = np.array([
+    [cos(THETA), sin(THETA), M_G2[s]*YG2],
+    [sin(THETA), -cos(THETA), M_G2[s]*b],
+    [-YG2,-b,-IG0+IG1+IG2]])
+    B = np.array([
         [M_G2[s]*(g*sin(THETA)-b*W**2)],
-        [M_G2[s]*(-g*cos(TEHTA)+YG2*w**2)-NG2],
-        [NG1*(XG0-XG1) - NG2*(XG0-XG2) + F1*(hG0-hG2) + F2*(hG0+hd)]
+        [M_G2[s]*(-g*cos(THETA)+YG2*W**2)-NG2],
+        [NG1*(XG0-XG1) - NG2*(XG0-XG2) + F1*(hG0-hd) + F2*(hG0+hd)]
     ])
     ##NHDW = A^(-1).b
-    NHDW = np.dot(np.linalg.inv(A),b)
-    FN[s] = NHDW[1]
-    FH[s] = NHDW[2]
-    DW = NHDW[3]
+    NHDW = np.dot(np.linalg.inv(A),B)
+    FN[s] = NHDW[0]
+    FH[s] = NHDW[1]
+    dw[s+1] = NHDW[2]
     w[s+1] = W + DW*dt
     theta[s+1] = THETA * W*dt
 
-def Inertia_low(low_unit,high_unit,s):
+def impulse_high(s):
     """
-	G0,G1,G2の重心座標，質量，慣性モーメント，垂直抗力，を求める関数
+    運動量保存則
+        M_G0[s]*DXG0 + M*DXG1 = (M_G0[s]+M)*dx_G0[s+1]
+
     引数
-        low_unit：フリーユニット（下）
-        high_unit：フリーユニット（上）
-        s：ステップ数
-        G0，G1，G2の重心，質量，慣性モーメントを求める
+        s:ステップ数
     """
-    #間のユニットの数
-    num = high_unit - low_unit + 1
+    dx_G0[s+1] = (M_G0[s]*DXG0+M*DXG1)/(M_G0[s]+M)
 
-    ##G0の重心の座標，質量
-    x_G0[s] = sum(x[low_unit:high_unit+1, s])/num #x座標
-    y_G0[s] = (y[high_unit+1,s]-y[low_unit+1,s])/2#y座標
-    M_G0[s] = M*num
-	h_G0[s] = h*num	 ##2h*num/2
-
-	##更新
-	I_G0[s] = 0
-    for i in range(low_unit, high_unit+1):
-        I_G0[s] += I + M*((x[i,s]-x_G0[s])**2+(y[i,s]-y_G0[s])**2)
-
-    ##G1の重心の座標，質量
-    x_G1[s] = sum(x[high_unit+1:, s])/(AllUnits-high_unit-1) #x座標
-    y_G1[s] = sum(y[high_unit+1:, s])/(AllUnits-high_unit-1)#y座標
-    M_G1[s] = M*(AllUnits-high_unit)
-	h_G1[s] = M*(AllUnits-high_unit)
-    I_G1[s] = M_G1[s]*((AllUnits-high_unit)**2+b**2)/3
-    ##G2の重心の座標，質量
-    x_G2[s] = sum(x[:low_unit, s])/low_unit #x座標
-    y_G2[s] = sum(y[:low_unit, s])/low_unit#y座標
-    M_G2[s] = M*low_unit
-	h_G2[s] = h*low_unit
-    I_G2[s] = M_G2[s]*(low_unit**2+b**2)/3
-
-    ##G0,G1,G2に働く力
-    N_G1[s] = M_G1[s]*g*sin(theta[s]) - M_G1[s]*y_G1[s]*w[s]**2 + M_G1[s]*x_G1[s]*dw[units,s]
-    N_G2[s] = N_G1[s] + M_G0[s]*g*cos(theta[s]) - M_G0[s]*y_G0[s]*w[s]**2 + M_G0[s]*x_G0[s]*dw[s]
-
-    f1[s]= c*(dx[high_unit,s]-dx_G1[s]) + k*(x[high_unit,s]-x_G1[s])  #上
-    f2[s]= c*(dx[low_unit,s]-dx_G2[s]) + k*(x[low_unit,s]-x_G2[s])   #下
-    if theta[s] < 0.1:
-        H[s] = f2[s]
-        N[s] = N_G2[s]
-
-
-    #置き換え
-    X = x[unit,s]
-    Y = y[unit,s]
-    DX = dx[unit,s]
-	DDX = ddx[unit,s]
-    THETA = theta[s]
-    W = w[s]
-    DW = dw[s]
-	XG0 = x_G0[s]
-    YG0 = y_G0[s]
-    XG1 = x_G1[s]
-    YG1 = y_G1[s]
-    XG2 = x_G2[s]
-    YG2 = y_G2[s]
-    DXG0 = dx_G0[s]
-    DXG1 = dx_G1[s]
-    DXG2 = dx_G2[s]
-    DYG0 = dx_G0[s]
-    DYG1 = dy_G1[s]
-    DYG2 = dy_G2[s]
-    DDXG0 = ddx_G0[s]
-    DDXG1 = ddx_G1[s]
-    DDXG2 = ddx_G2[s]
-    DDYG0 = ddy_G0[s]
-    DDYG1 = ddy_G1[s]
-    DDYG2 = ddy_G2[s]
-    NG1  = N_G1[unit,s]
-    NG2  = N_G2[unit,s]
-    nG1  = n_G1[unit,s]
-    nG2  = n_G2[unit,s]
-	hG0  = h_G0[s]
-	hG1  = h_G1[s]
-	hG2  = h_G2[s]
-    F1   = f1[s]
-    F2   = f2[s]
-
-
-def impulse_low(low_unit,s):
+def impluse_low(s):
     """
-    衝撃力をFとして先のFを更新する
-    F  =
-    fb =
+    運動量保存則
+        M_G0[s]*DXG0 + M*DXG2 = (M_G0[s]+M)*dx_G0[s+1]
+    DXG2 = 0より
+        M_G0[s]*DXG0 = (M_G0[s]+M)*dx_G0[s+1]
+
+    引数
+        s:ステップ数
     """
-    ##G0について
-    dx_G0[s+1] = DXG0 + dt*(-F - (f1+f2)/M_G0[s] + sin(THETA)+XG0*W**2-YG0*DW)
-    x_G0[s+1]  = XG0  + DXG0*dt
-    ##G1について
-    dx_G1[s+1] = DXG1 + dt*(f1/M_G1[s] + g*sin(THETA)+XG1*W**2+YG1*DW)
-    x_G1[s+1]  = XG1  + DXG1*dt
-    ##A(low_unit)について
-    dx[low_unit,s+1] = dx[low_unit,s] + dt*((F+f-fb)_M_G2[s] + sin(THETA)+x[low_unit,s]*W**2 - y[low_unit,s]*DW)
-    x[low_unit,s+1]  = x[low_unit,s]  + dx[low_unit,s]*dt
+    dx_G0[s+1] = DXG0*M_G0[s]/(M_G0[s]+M)
 
-    fb = c*(dx[low_unit,s]-dx_G2[s]) + k*(x[last_unit,s]-x_G2[s])  #上
-
-    ##N,H,dWを求めるための行列
-    A = np.zeros(3,3)
-    b = np.zeros(3)
-    NHDW = np.zeros(3)
-    ##NHDW = [N,H,dW]
-    A = np.array([
-        [cos(THETA), sin(THETA), M_G2[s]*YG2],
-        [sin(THETA), cos(THETA), M_G2[s]*b],
-        [-YG2, -b, -IG0+IG1+IG2]
-    ])
-    b = np.array([
-        [M_G2[s]*(g*sin(THETA)-b*W**2)],
-        [M_G2[s]*(-g*cos(TEHTA)+YG2*w**2)-NG2],
-        [NG1*(XG0-XG1) - NG2*(XG0-XG2) + F1*(hG0-hG2) + F2*(hG0+hd)]
-    ])
-
+def xy(low_unit,high_unit,s):
+    X = np.zeros(AllUnits)
+    X[:low_unit] = x_G1[s] - x_G1[s-1]
+    X[low_unit:high_unit+1] = x_G0[s] - x_G0[s-1]
+    X[high_unit+1:] = x_G2[s] - x_G2[s-1]
+    Y = y[:,0]
+    x[:,s] = x[:,s-1] + X*cos(THETA) + Y*sin(THETA)
+    y[:,s] = y[:,s-1] - X*sin(THETA) + Y*cos(THETA)
 
 low = Attacked_unit
 high  = Attacked_unit
 
-for t in range(int(TF/dt)):
+for t in range(step-1):
     Inertia(low,high,t)
 
-    if t<TF/dt:
+    if t < int(TF/dt):
         impulse(Attacked_unit,t)
 
     else:
-        if x[low,t]-x_G2[t] > x_max-2:
-            if x[low,t]-x_G2[t] < x_max:
-                impulse_low()
-            else:
-                low -= 1
-        elif x[high,t]-x_G1[t] > x_max-2:
-            if x[high,t]-x_G1[t] < x_max
-                impulse_high()
-            else:
-                high  += 1
+        if x[low,t]-x_G2[t] > x_max:
+            impulse_low()
+            low -= 1
+        elif x[high,t]-x_G1[t] > x_max:
+            impulse_high()
+            high  += 1
         else:
             PosRotate(Attacked_unit,t)
-
-
-print(x_G0[0:10])
-print(x_G1[0:10])
-print(x_G2[0:10])
-
+    xy(low,high,t)
 
 plt.figure(figsize=(8,3))
 # t vs x のグラフ
 plt.plot(x_G0)
-plt.xlim(0, 10)
-plt.ylim(-50,-49.5)
 plt.xlabel('t (step)')
-plt.ylabel('x (m)')
+plt.ylabel('x (mm)')
+plt.legend()
 plt.show()
 
- 
+
+
+
+# def Inertia_low(low_unit,high_unit,s):
+#     """
+# 	G0,G1,G2の重心座標，質量，慣性モーメント，垂直抗力，を求める関数
+#     引数
+#         low_unit：フリーユニット（下）
+#         high_unit：フリーユニット（上）
+#         s：ステップ数
+#         G0，G1，G2の重心，質量，慣性モーメントを求める
+#     """
+#     #間のユニットの数
+#     num = high_unit - low_unit + 1
+#
+#     ##G0の重心の座標，質量
+#     x_G0[s] = sum(x[low_unit:high_unit+1, s])/num #x座標
+#     y_G0[s] = (y[high_unit+1,s]-y[low_unit+1,s])/2#y座標
+#     M_G0[s] = M*num
+# 	h_G0[s] = h*num	 ##2h*num/2
+#
+# 	##更新
+# 	I_G0[s] = 0
+#     for i in range(low_unit, high_unit+1):
+#         I_G0[s] += I + M*((x[i,s]-x_G0[s])**2+(y[i,s]-y_G0[s])**2)
+#
+#     ##G1の重心の座標，質量
+#     x_G1[s] = sum(x[high_unit+1:, s])/(AllUnits-high_unit-1) #x座標
+#     y_G1[s] = sum(y[high_unit+1:, s])/(AllUnits-high_unit-1)#y座標
+#     M_G1[s] = M*(AllUnits-high_unit)
+# 	h_G1[s] = M*(AllUnits-high_unit)
+#     I_G1[s] = M_G1[s]*((AllUnits-high_unit)**2+b**2)/3
+#     ##G2の重心の座標，質量
+#     x_G2[s] = sum(x[:low_unit, s])/low_unit #x座標
+#     y_G2[s] = sum(y[:low_unit, s])/low_unit#y座標
+#     M_G2[s] = M*low_unit
+# 	h_G2[s] = h*low_unit
+#     I_G2[s] = M_G2[s]*(low_unit**2+b**2)/3
+#
+#     ##G0,G1,G2に働く力
+#     N_G1[s] = M_G1[s]*g*sin(theta[s]) - M_G1[s]*y_G1[s]*w[s]**2 + M_G1[s]*x_G1[s]*dw[units,s]
+#     N_G2[s] = N_G1[s] + M_G0[s]*g*cos(theta[s]) - M_G0[s]*y_G0[s]*w[s]**2 + M_G0[s]*x_G0[s]*dw[s]
+#
+#     f1[s]= c*(dx[high_unit,s]-dx_G1[s]) + k*(x[high_unit,s]-x_G1[s])  #上
+#     f2[s]= c*(dx[low_unit,s]-dx_G2[s]) + k*(x[low_unit,s]-x_G2[s])   #下
+#     if theta[s] < 0.1:
+#         H[s] = f2[s]
+#         N[s] = N_G2[s]
+#
+#
+#     #置き換え
+#     X = x[unit,s]
+#     Y = y[unit,s]
+#     DX = dx[unit,s]
+# 	DDX = ddx[unit,s]
+#     THETA = theta[s]
+#     W = w[s]
+#     DW = dw[s]
+# 	XG0 = x_G0[s]
+#     YG0 = y_G0[s]
+#     XG1 = x_G1[s]
+#     YG1 = y_G1[s]
+#     XG2 = x_G2[s]
+#     YG2 = y_G2[s]
+#     DXG0 = dx_G0[s]
+#     DXG1 = dx_G1[s]
+#     DXG2 = dx_G2[s]
+#     DDXG0 = ddx_G0[s]
+#     DDXG1 = ddx_G1[s]
+#     DDXG2 = ddx_G2[s]
+#     NG1  = N_G1[unit,s]
+#     NG2  = N_G2[unit,s]
+#     nG1  = n_G1[unit,s]
+#     nG2  = n_G2[unit,s]
+# 	hG0  = h_G0[s]
+# 	hG1  = h_G1[s]
+# 	hG2  = h_G2[s]
+#     F1   = f1[s]
+#     F2   = f2[s]
+
+# def impulse_low(low_unit,s):
+#     """
+#     衝撃力をFとして先のFを更新する
+#     F  =
+#     fb =
+#     """
+#     ##G0について
+#     dx_G0[s+1] = DXG0 + dt*(-F - (f1+f2)/M_G0[s] + sin(THETA)+XG0*W**2-YG0*DW)
+#     x_G0[s+1]  = XG0  + DXG0*dt
+#     ##G1について
+#     dx_G1[s+1] = DXG1 + dt*(f1/M_G1[s] + g*sin(THETA)+XG1*W**2+YG1*DW)
+#     x_G1[s+1]  = XG1  + DXG1*dt
+#     ##A(low_unit)について
+#     dx[low_unit,s+1] = dx[low_unit,s] + dt*((F+f-fb)_M_G2[s] + sin(THETA)+x[low_unit,s]*W**2 - y[low_unit,s]*DW)
+#     x[low_unit,s+1]  = x[low_unit,s]  + dx[low_unit,s]*dt
+#
+#     fb = c*(dx[low_unit,s]-dx_G2[s]) + k*(x[last_unit,s]-x_G2[s])  #上
+#
+#     ##N,H,dWを求めるための行列
+#     A = np.zeros(3,3)
+#     b = np.zeros(3)
+#     NHDW = np.zeros(3)
+#     ##NHDW = [N,H,dW]
+#     A = np.array([
+#         [cos(THETA), sin(THETA), M_G2[s]*YG2],
+#         [sin(THETA), cos(THETA), M_G2[s]*b],
+#         [-YG2, -b, -IG0+IG1+IG2]
+#     ])
+#     b = np.array([
+#         [M_G2[s]*(g*sin(THETA)-b*W**2)],
+#         [M_G2[s]*(-g*cos(TEHTA)+YG2*w**2)-NG2],
+#         [NG1*(XG0-XG1) - NG2*(XG0-XG2) + F1*(hG0-hG2) + F2*(hG0+hd)]
+#     ])
+###
