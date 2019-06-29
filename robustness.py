@@ -4,11 +4,11 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 ##ユニットの各パラメータ
-M  = 1 #[kg] ユニットの質量
-c  = 0.1    #粘性定数
-k  = 0.1    #バネ定数
-b  = 100.0/2*0.001  #[m] ユニットの幅/2
-h  = 50.0/2 *0.001   #[m] ユニットの高さ/2
+M  = 0.1 #[kg] ユニットの質量
+c  = 1    #粘性定数
+k  = 1    #バネ定数
+b  = 200.0/2*0.001  #[m] ユニットの幅/2
+h  = 30.0/2 *0.001   #[m] ユニットの高さ/2
 hd = 20.0  *0.001        #[m] バネダンパの作用点までの距離
 I  = M*(b*b + h*h)/3  #１ユニットの重心まわりの慣性モーメント
 g  = 9.8    ##[m/s2]重力加速度
@@ -16,13 +16,13 @@ x_max = 10.0*0.001    ##最大変位量
 AllUnits = 20         #ユニット数
 
 ##[N]衝撃力
-F = 10
+F = 100
 Attacked_unit = 10
 
 ##時間
 T  = 1.0    #[s] 全体の時間
-TF = 0.02     #[s] 衝撃力がかかっている時間
-dt = 0.01    #[s] 微小時間
+TF = 0.002     #[s] 衝撃力がかかっている時間
+dt = 0.001    #[s] 微小時間
 step = int(T/dt) #ステップ数
 
 
@@ -183,21 +183,20 @@ def impulse(unit,s):
         unit:衝撃が与えられたユニット
         s :ステップ数
     """
-    print("dx_G0[s]",dx_G0[s],"x_G0[s]",x_G0[s])
+
     ##t_s+1における速度と座標
     dx_G0[s+1] = dx_G0[s] + (F-(f1[s]+f2[s]))*dt/M
     x_G0[s+1]  = x_G0[s] + dx_G0[s]*dt
-    print("dx_G0[s+1]",dx_G0[s+1],"x_G0[s+1]",x_G0[s+1])
     ##上 G1###
     ##G1の速度，座標
-
     dx_G1[s+1] = dx_G1[s] +f1[s]*dt/M_G1[s]
     x_G1[s+1]  = x_G1[s] + dx_G1[s]*dt
 
     ##角速度，角度
-    dw[s] = (F*h*(2*unit+1) + M*AllUnits*g*(sin(theta[s])*y_G[s] + cos(theta[s])*x_G[s]))/I_G[s]
+    dw[s] = (F*h*(2*unit+1) + M*AllUnits*g*(sin(theta[s])*y_G[s] - cos(theta[s])*x_G[s]))/I_G[s]
     w[s+1] = w[s]+ dw[s]*dt
     theta[s+1] =  theta[s] + w[s]*dt
+    print("$x_G",x_G[s],"y_G",y_G[s],"I_G",I_G[s],"dw[s]",dw[s],"w[s+1]",w[s+1],"theta[s+1]",theta[s+1])
 
     dx_G2[s+1] = 0
     x_G2[s+1] = -b
@@ -227,7 +226,7 @@ def PosRotate(unit,s):
     x_G1[s+1]  = x_G1[s]  + dx_G1[s]*dt
 
     ##角速度，角度
-    dw[s]  = M*AllUnits*g*(sin(theta[s])*y_G[s] + cos(theta[s])*x_G[s])/I_G[s]
+    dw[s]  = M*AllUnits*g*(sin(theta[s])*y_G[s] - cos(theta[s])*x_G[s])/I_G[s]
     w[s+1] = w[s] + dw[s]*dt
     theta[s+1] =  theta[s] + w[s]*dt
 
@@ -301,7 +300,7 @@ print("#########################################################################
 
 for t in range(step-1):
     print("---------------------------------------------------------------------------------")
-    print("t:",t,"low:",low,"high:",high)
+    print("t:",t*dt,"low:",low,"high:",high)
     if t == 0:
         Inertia(low,high,t)
         print(0.00)
@@ -314,30 +313,36 @@ for t in range(step-1):
         xy(low,high,t)
         print("<1>")
     else:
-        if x[low,t]-(-b) > x_max:
+
+        if x[low,t-1]-(-b) > x_max or x[low,t-1]-(-b) < -x_max:
             impulse_low(t)
             xy(low,high,t)
             low -= 1
             Inertia(low,high,t)
             print("<2>")
-        elif x[high,t]-x_G1[t] > x_max:
+
+
+        elif x[high,t-1]-x_G1[t] > x_max or x[high,t-1]-x_G1[t] < -x_max:
             impulse_high(t)
             xy(low,high,t)
             high  += 1
             Inertia(low,high,t)
             print("<3>")
+
         else:
             PosRotate(Attacked_unit,t)
             xy(low,high,t)
             print("<4>")
 
-    if high == AllUnits or low == 1:
+    if high == 18 or low == 1:
         break
     if theta[t] < 0:
         theta[t] = 0
+    if theta[t] > pi/2:
+        break
 
     print("x_G",x_G[t],"y_G",y_G[t],"I_G",I_G[t])
-    print("x[low+1,t]",x[low+1,t],"x[high,t]",x[high,t])
+
     print("M_G0",M_G0[t],"x_G0[t]",x_G0[t],"dx_G0[t]",dx_G0[t])
     print("M_G1",M_G1[t],"x_G1[t]",x_G1[t],"dx_G1[t]",dx_G1[t])
     print("theta",theta[t])
@@ -361,3 +366,58 @@ plt.xlabel('t (step)')
 plt.ylabel('x_G')
 plt.legend()
 plt.show()
+#
+# plt.figure(figsize=(8,3))
+# # t vs x のグラフ
+# plt.plot(theta,label = "theta")
+#
+# # #
+# # plt.plot(I_G0,label = "IG0")
+# # plt.plot(I_G1,label = "IG1")
+# # plt.plot(I_G2,label = "IG2")
+# #
+# # plt.plot(f1,label = "f1")
+# # plt.plot(f2,label = "f2")
+#
+# plt.xlim(0,1000)
+# plt.xlabel('t (step)')
+# plt.ylabel('theta')
+# plt.legend()
+# plt.show()
+
+# dw2 = 0
+# w2 = np.zeros(step)
+# theta2 = np.zeros(step)
+# M2 = M * AllUnits
+# I2 = M*AllUnits*((h*AllUnits)**2+b**2)/3+M*AllUnits*((h*AllUnits)**2+b**2)
+# for t in range(step-1):
+#     if t < int(TF/dt):
+#         dw2 = (F*h*(2*Attacked_unit+1) + M2*g*(h*AllUnits*sin(theta2[t])-b*cos(theta2[t])))/I2
+#         w2[t+1] = w2[t] + dw2*dt
+#         theta2[t+1] = theta2[t] + w2[t]*dt
+#     else:
+#         dw2 = (M2*g*(h*AllUnits*sin(theta2[t])-b*cos(theta2[t])))/I2
+#         w2[t+1] = w2[t] + dw2*dt
+#         theta2[t+1] = theta2[t] + w2[t]*dt
+#     if theta2[t] < 0:
+#         theta2[t] = 0
+#     if theta2[t] > pi/2:
+#         break
+#
+# plt.figure(figsize=(8,3))
+# # t vs x のグラフ
+# plt.plot(theta2,label = "theta2")
+#
+# # #
+# # plt.plot(I_G0,label = "IG0")
+# # plt.plot(I_G1,label = "IG1")
+# # plt.plot(I_G2,label = "IG2")
+# #
+# # plt.plot(f1,label = "f1")
+# # plt.plot(f2,label = "f2")
+#
+# plt.xlim(0,1000)
+# plt.xlabel('t (step)')
+# plt.ylabel('theta2')
+# plt.legend()
+# plt.show()
