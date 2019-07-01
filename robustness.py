@@ -4,7 +4,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 ##ユニットの各パラメータ
-M  = 0.1 #[kg] ユニットの質量
+M  = 0.05 #[kg] ユニットの質量
 c  = 0.1    #粘性定数
 k  = 0.1    #バネ定数
 b  = 200.0/2*0.001  #[m] ユニットの幅/2
@@ -16,11 +16,11 @@ x_max = 30.0*0.001    ##最大変位量
 AllUnits = 20         #ユニット数
 
 ##[N]衝撃力
-F = 10
+F = 100
 Attacked_unit = 10
 
 ##時間
-T  = 2.0    #[s] 全体の時間
+T  = 5    #[s] 全体の時間
 TF = 0.01     #[s] 衝撃力がかかっている時間
 dt = 0.001    #[s] 微小時間
 step = int(T/dt) #ステップ数
@@ -236,7 +236,7 @@ def PosRotate(unit,s):
     else:
         n_N[s] = x_G[s]
 
-def impulse_high(unit,s):
+def impulse_high(low_unit,high_unit,unit,s):
     """
     運動量保存則
         M_G0[s]*dx_G0[s] + M*dx_G1[s] = (M_G0[s]+M)*dx_G0[s+1]
@@ -245,6 +245,7 @@ def impulse_high(unit,s):
         s:ステップ数
     """
     dx_G0[s+1] = (M_G0[s]*dx_G0[s]+M*dx_G1[s])/(M_G0[s]+M)
+    Inertia(low_unit,high_unit+1,s)
     x_G0[s+1]  = x_G0[s] + dx_G0[s]*dt
 
     DDXG1 =  - f1[s]/(M_G1[s]-M) + g*sin(theta[s]) + x_G1[s]*w[s]**2 - y_G1[s]*dw[s]
@@ -263,7 +264,7 @@ def impulse_high(unit,s):
     else:
         n_N[s] = x_G[s]
 
-def impulse_low(unit,s):
+def impulse_low(low_unit,high_unit,unit,s):
     """
     運動量保存則
         M_G0[s]*dx_G0[s] + M*dx_G2[s] = (M_G0[s]+M)*dx_G0[s+1]
@@ -274,6 +275,7 @@ def impulse_low(unit,s):
         s:ステップ数
     """
     dx_G0[s+1] = dx_G0[s]*M_G0[s]/(M_G0[s]+M)
+    Inertia(low_unit-1,high_unit,s)
     x_G0[s+1]  = x_G0[s] + dx_G0[s]*dt
 
     DDXG1 =  - f1[s]/M_G1[s] + g*sin(theta[s]) + x_G1[s]*w[s]**2 - y_G1[s]*dw[s]
@@ -310,14 +312,14 @@ print("#########################################################################
 print("#####################################################################################")
 print("#####################################################################################")
 
-flag = 0
+flag = 1
 
 for t in range(step-1):
-    print("---------------------------------------------------------------------------------")
-    print("t:",t*dt,"low:",low,"high:",high)
+    #print("---------------------------------------------------------------------------------")
 
     if t == 0:
         Inertia(low,high,t)
+
     else:
         IF1F2(low,high,t)
 
@@ -329,31 +331,36 @@ for t in range(step-1):
     ##衝撃後
     else:
         if x[low,t-1]-(-b) > x_max:
-            impulse_low(Attacked_unit,t)
+            impulse_low(low,high,Attacked_unit,t)
             low -= 1
             xy(low,high,t)
+            print("t:",t*dt,"low:",low,"high:",high)
+
             print("<2>")
 
         elif x[high,t-1]-x_G1[t-1] > x_max:
-            impulse_high(Attacked_unit,t)
+            impulse_high(low,high,Attacked_unit,t)
             high  += 1
             xy(low,high,t)
+            print("t:",t*dt,"low:",low,"high:",high)
+
             print("<3>")
 
         else:
             PosRotate(Attacked_unit,t)
             xy(low,high,t)
-            print("<4>")
+            #print("<4>")
 
     if high == 18 or low == 1:
-        EndTime = t
         print(EndTime)
         break
 
     if theta[t] > pi/2:
-        EndTime = t
+        theta[t+1:] = theta[t]
         print(EndTime)
         break
+
+    EndTime = t
 
 #
 plt.figure(figsize=(8,5))
@@ -365,6 +372,7 @@ plt.xlabel('t [ms]')
 plt.ylabel('x[m]')
 plt.legend()
 plt.xlim(0,EndTime)
+plt.savefig('各ユニットのx座標.png')
 plt.show()
 
 plt.plot(x_G,label = "xG")
@@ -375,6 +383,7 @@ plt.xlabel('t [ms]')
 plt.ylabel('x[m]')
 plt.legend()
 plt.xlim(0,EndTime)
+plt.savefig('全体G0G1G2の重心.png')
 plt.show()
 
 plt.plot(dx_G0,label = "dxG0")
@@ -384,7 +393,9 @@ plt.xlabel('t [ms]')
 plt.ylabel('dxdt[m/s]')
 plt.legend()
 plt.xlim(0,EndTime)
+plt.savefig('重心速度.png')
 plt.show()
+
 
 plt.plot(f1,label = "f1")
 plt.plot(f2,label = "f2")
@@ -400,22 +411,25 @@ plt.xlabel('t [ms]')
 plt.ylabel('theta')
 plt.legend()
 plt.xlim(0,EndTime)
+plt.savefig('角度_吸収あり.png')
 plt.show()
 
-
-plt.plot(I_G,label = "IG")
-plt.xlabel('t [ms]')
-plt.ylabel('IG')
-plt.legend()
-plt.xlim(0,EndTime)
-plt.show()
+#
+# plt.plot(I_G,label = "IG")
+# plt.xlabel('t [ms]')
+# plt.ylabel('IG')
+# plt.legend()
+# plt.xlim(0,EndTime)
+# plt.show()
 
 plt.plot(n_N,label = "n")
 plt.xlabel('t [ms]')
 plt.ylabel('n')
 plt.legend()
 plt.xlim(0,EndTime)
+plt.savefig('垂直抗力の位置.png')
 plt.show()
+
 
 #######################################################################
 #######################################################################
@@ -432,7 +446,7 @@ yG2 = h*AllUnits
 I2 = 4*M2*(yG2**2+b**2)/3
 H2 = h*(2*Attacked_unit+1)
 n2[:] = xG2
-
+EndTime2 = 0
 for t in range(step-1):
     if t < int(TF/dt):
         n2[t] = (F*H2 + M2*g*(sin(theta2[t])*y_G[t] + cos(theta2[t])*x_G[t]))/(M2*g)
@@ -456,23 +470,28 @@ for t in range(step-1):
             n2[t] = xG2
 
         if theta2[t] == 0:
-            EndTime = t
+
             break
 
     if theta2[t] > pi/2:
-        EndTime = t
+        theta2[t+1:] = theta2[t]
         break
 
+    EndTime2 = t
 
 plt.figure(figsize=(8,5))
+plt.plot(theta,label = "theta")
 plt.plot(theta2,label = "theta2")
 # plt.plot(w,label = "w")
 plt.xlabel('t [ms]')
-plt.ylabel('theta2')
+plt.ylabel('theta')
 plt.legend()
-plt.xlim(0,EndTime)
+if EndTime > EndTime2:
+    plt.xlim(0,EndTime)
+else:
+    plt.xlim(0,EndTime2)
+plt.savefig('角度.png')
 plt.show()
-
 #
 # plt.figure(figsize=(8,3))
 # # t vs x のグラフ
