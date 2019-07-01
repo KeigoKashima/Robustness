@@ -12,7 +12,7 @@ h  = 30.0/2 *0.001   #[m] ユニットの高さ/2
 hd = 20.0  *0.001        #[m] バネダンパの作用点までの距離
 I  = M*(b*b + h*h)/3  #１ユニットの重心まわりの慣性モーメント
 g  = 9.8    ##[m/s2]重力加速度
-x_max = 50.0*0.001    ##最大変位量
+x_max = 30.0*0.001    ##最大変位量
 AllUnits = 20         #ユニット数
 
 ##[N]衝撃力
@@ -227,7 +227,7 @@ def PosRotate(unit,s):
     x_G1[s+1]  = x_G1[s]  + dx_G1[s]*dt
 
     ##角度が0以上のとき，角速度，角度を計算する．
-    if x_G[s] > 0.001 or theta[s] > 0:
+    if x_G[s] > 0 or theta[s] > 0:
         ##角速度，角度
         n_N[s] = 0  ##垂直抗力のx座標は0
         dw[s]  = M*AllUnits*g*(sin(theta[s])*y_G[s] + cos(theta[s])*x_G[s])/I_G[s]
@@ -235,7 +235,6 @@ def PosRotate(unit,s):
         theta[s+1] =  theta[s] + w[s]*dt
     else:
         n_N[s] = x_G[s]
-
 
 def impulse_high(unit,s):
     """
@@ -255,7 +254,7 @@ def impulse_high(unit,s):
     x_G1[s+1]  = x_G1[s]  + dx_G1[s]*dt
 
     ##角度が0以上のとき，角速度，角度を計算する．
-    if x_G[s] > 0.001 or theta[s] > 0:
+    if x_G[s] > 0 or theta[s] > 0:
         ##角速度，角度
         n_N[s] = 0  ##垂直抗力のx座標は0
         dw[s]  = M*AllUnits*g*(sin(theta[s])*y_G[s] + cos(theta[s])*x_G[s])/I_G[s]
@@ -285,7 +284,7 @@ def impulse_low(unit,s):
 
 
     ##角度が0以上のとき，角速度，角度を計算する．
-    if x_G[s] > 0.001 or theta[s] > 0:
+    if x_G[s] > 0 or theta[s] > 0:
         ##角速度，角度
         n_N[s] = 0  ##垂直抗力のx座標は0
         dw[s]  = M*AllUnits*g*(sin(theta[s])*y_G[s] + cos(theta[s])*x_G[s])/I_G[s]
@@ -311,6 +310,7 @@ print("#########################################################################
 print("#####################################################################################")
 print("#####################################################################################")
 
+flag = 0
 
 for t in range(step-1):
     print("---------------------------------------------------------------------------------")
@@ -330,17 +330,14 @@ for t in range(step-1):
     else:
         if x[low,t-1]-(-b) > x_max:
             impulse_low(Attacked_unit,t)
-            xy(low,high,t)
             low -= 1
-            Inertia(low,high,t)
+            xy(low,high,t)
             print("<2>")
 
-
-        elif x[high,t-1]-x_G1[t] > x_max:
+        elif x[high,t-1]-x_G1[t-1] > x_max:
             impulse_high(Attacked_unit,t)
-            xy(low,high,t)
             high  += 1
-            Inertia(low,high,t)
+            xy(low,high,t)
             print("<3>")
 
         else:
@@ -375,7 +372,7 @@ plt.plot(x_G0,label = "xG0")
 plt.plot(x_G1,label = "xG1")
 plt.plot(x_G2,label = "xG2")
 plt.xlabel('t [ms]')
-plt.ylabel('dxdt[m/s]')
+plt.ylabel('x[m]')
 plt.legend()
 plt.xlim(0,EndTime)
 plt.show()
@@ -384,7 +381,15 @@ plt.plot(dx_G0,label = "dxG0")
 plt.plot(dx_G1,label = "dxG1")
 plt.plot(dx_G2,label = "dxG2")
 plt.xlabel('t [ms]')
-plt.ylabel('x[m]')
+plt.ylabel('dxdt[m/s]')
+plt.legend()
+plt.xlim(0,EndTime)
+plt.show()
+
+plt.plot(f1,label = "f1")
+plt.plot(f2,label = "f2")
+plt.xlabel('t [ms]')
+plt.ylabel('f1')
 plt.legend()
 plt.xlim(0,EndTime)
 plt.show()
@@ -393,6 +398,14 @@ plt.plot(theta,label = "theta")
 # plt.plot(w,label = "w")
 plt.xlabel('t [ms]')
 plt.ylabel('theta')
+plt.legend()
+plt.xlim(0,EndTime)
+plt.show()
+
+
+plt.plot(I_G,label = "IG")
+plt.xlabel('t [ms]')
+plt.ylabel('IG')
 plt.legend()
 plt.xlim(0,EndTime)
 plt.show()
@@ -422,7 +435,7 @@ n2[:] = xG2
 
 for t in range(step-1):
     if t < int(TF/dt):
-        n2[t] = (F*H2 + M2*g*xG2)/(M2*g)
+        n2[t] = (F*H2 + M2*g*(sin(theta2[t])*y_G[t] + cos(theta2[t])*x_G[t]))/(M2*g)
         print(t,xG2,n2[t],theta2[t],F*H2,M2*g*xG2)
         if n2[t] > 0:
             ##角速度，角度
@@ -432,7 +445,6 @@ for t in range(step-1):
             theta2[t+1] =  theta2[t] + w2[t]*dt
 
     else:
-        n2[t] = (F*H2 + M2*g*xG2)/(M2*g)
         print(t,xG2,n2[t],theta2[t])
         if theta2[t] > 0:
             ##角速度，角度
@@ -440,12 +452,17 @@ for t in range(step-1):
             dw2[t]  = M2*g*(sin(theta2[t])*yG2 + cos(theta2[t])*xG2)/I2
             w2[t+1] = w2[t] + dw2[t]*dt
             theta2[t+1] =  theta2[t] + w2[t]*dt
+        else:
+            n2[t] = xG2
 
-
+        if theta2[t] == 0:
+            EndTime = t
+            break
 
     if theta2[t] > pi/2:
         EndTime = t
         break
+
 
 plt.figure(figsize=(8,5))
 plt.plot(theta2,label = "theta2")
@@ -453,6 +470,7 @@ plt.plot(theta2,label = "theta2")
 plt.xlabel('t [ms]')
 plt.ylabel('theta2')
 plt.legend()
+plt.xlim(0,EndTime)
 plt.show()
 
 #
